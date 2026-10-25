@@ -26,6 +26,9 @@ metrics
     Decision-relevant outputs: 8-hour mean CO2, peak, time above limits.
 verification
     Convergence, stability, stiffness, FLOP counts, timing and roofline tools.
+design
+    Compliance checks, minimum ventilation by root finding (bisection, secant),
+    demand-controlled ventilation and outdoor-air energy.
 """
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"

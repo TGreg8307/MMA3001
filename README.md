@@ -34,7 +34,7 @@ ODE has an exact solution. It is used to verify the numerical solvers
 | 1. Data loading, cleaning and resampling (`occvent.io`, `occvent.cleaning`, `occvent.prepare`) | ✅ done and tested |
 | 2. CO2 mass-balance model, exact solution and numerical solvers (`occvent.co2model`, `occvent.solvers`) | ✅ done and tested |
 | 3. Verification and performance study (`notebooks/03_verification.ipynb`, `occvent.metrics`, `occvent.verification`) | ✅ done |
-| 4. Compliance check, ventilation optimisation, DCV energy comparison | ⏳ |
+| 4. Compliance check, minimum ventilation (root finding), DCV energy comparison (`notebooks/04_ventilation_design.ipynb`, `occvent.design`) | ✅ done |
 | 5. Sensitivity analysis | ⏳ |
 | 6. Occupancy forecasting (ML extension) | ⏳ |
 
@@ -49,10 +49,11 @@ ODE has an exact solution. It is used to verify the numerical solvers
 │   ├── co2model.py       CO2 mass-balance ODE, exact solution, mass balance
 │   ├── solvers.py        explicit/implicit Euler, RK4, SciPy benchmark
 │   ├── metrics.py        8-hour mean, peak, time above limits
-│   └── verification.py   convergence, stability, stiffness, FLOPs, timing, roofline
+│   ├── verification.py   convergence, stability, stiffness, FLOPs, timing, roofline
+│   └── design.py         compliance, Q_min root finding, DCV, energy
 ├── tests/                pytest test suite
 ├── data/                 raw/ and processed/ (not committed, see data/README.md)
-├── notebooks/            analysis notebooks (03_verification.ipynb)
+├── notebooks/            03_verification.ipynb, 04_ventilation_design.ipynb
 ├── docs/                 figures/ for the report; HTML API documentation (pdoc)
 ├── pyproject.toml        package metadata and pytest settings
 └── requirements.txt      pinned, verified dependency versions
@@ -187,6 +188,26 @@ checks the solvers against the exact solution and measures their cost. Figures a
 | Zero-order hold vs linear interpolation | linear interpolation overstates person-hours by 5.2 % on the busiest day |
 | Numerical vs parameter error | Euler error 0.09 ppm vs 50–60 ppm for ±20 % in Q or G |
 | Performance (1.12 M steps) | exact `lfilter` 0.04–0.05 s (3–6× faster than the Python loop, machine-dependent); loop solvers interpreter-bound, far below the measured roofline |
+
+## Ventilation design (stage 4)
+
+`notebooks/04_ventilation_design.ipynb` (about 30 s) applies the verified exact solution to the whole
+two-year G.20 record. Every result rests on the stated assumptions (V = 600 m3 estimated,
+G = 0.0052 L/s per person, C_out = 420 ppm, well-mixed air).
+
+* **Design occupancy:** 60 people (highest 30-minute sustained count; set by event days such as
+  early-August Sundays, consistent with Open Day). Design rate 10 L/s per person gives 600 L/s.
+* **Minimum constant ventilation** (root of F(Q) = metric − limit, shooting-method structure):
+
+| Criterion | Q_min | Bisection | Secant | Secant in 1/Q | SciPy brentq |
+|---|---|---|---|---|---|
+| NCC 8-h mean ≤ 850 ppm | 211.9 L/s (35 % of design) | 17 solves | 9 | **6** | 211.86 ✓ |
+| Peak ≤ 1000 ppm | 443.7 L/s (74 % of design) | 17 solves | 12 | **7** | 443.68 ✓ |
+
+* **Demand-controlled ventilation** Q = max(50 L/s, q_p N): q_p = 12.06 L/s per person (theory 12.09),
+  meeting both criteria, also with the fan capped at 600 L/s.
+* **Annual outdoor-air conditioning energy** (ΔT = 7 K assumed; percentages are independent of ΔT):
+  fixed design 44.4 MWh, scheduled 06–22 h 23.1 MWh (−48 %), DCV 3.9 MWh (**−91 %**).
 
 ## AI use
 
