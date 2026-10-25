@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "occvent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Occupancy-driven ventilation assessment: a CO2 mass-balance model driven by people-counting data (MMA3001 project)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,6 +22,7 @@ dependencies = [
 dev = [
     "pytest>=8",
     "pytest-html>=4",
+    "line_profiler>=4",
     "pdoc>=14",
     "jupyterlab>=4",
 ]

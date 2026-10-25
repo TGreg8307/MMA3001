@@ -22,6 +22,10 @@ co2model
     Well-mixed CO2 mass-balance ODE, its exact solution and the CO2 budget.
 solvers
     Explicit Euler, implicit Euler, RK4 and a SciPy ``solve_ivp`` benchmark.
+metrics
+    Decision-relevant outputs: 8-hour mean CO2, peak, time above limits.
+verification
+    Convergence, stability, stiffness, FLOP counts, timing and roofline tools.
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

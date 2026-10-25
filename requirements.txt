@@ -9,5 +9,6 @@ matplotlib==3.11.2
 # Development tools (tests, test report, HTML docs, notebooks)
 pytest>=8
 pytest-html>=4
+line_profiler>=4
 pdoc>=14
 jupyterlab>=4
