@@ -1,0 +1,13 @@
+# Exact versions the pipeline and test suite were verified with.
+# Install with:  pip install -r requirements.txt  then  pip install -e .
+numpy==2.5.3
+pandas==3.0.5
+scipy==1.18.1
+scikit-learn==1.9.1
+matplotlib==3.11.2
+
+# Development tools (tests, test report, HTML docs, notebooks)
+pytest>=8
+pytest-html>=4
+pdoc>=14
+jupyterlab>=4

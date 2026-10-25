@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "occvent"
+version = "0.1.0"
+description = "Occupancy-driven ventilation assessment: a CO2 mass-balance model driven by people-counting data (MMA3001 project)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Tom Gregory" }]
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=3.0",
+    "scipy>=1.13",
+    "scikit-learn>=1.5",
+    "matplotlib>=3.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-html>=4",
+    "pdoc>=14",
+    "jupyterlab>=4",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-ra"
