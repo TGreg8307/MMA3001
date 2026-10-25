@@ -29,6 +29,9 @@ verification
 design
     Compliance checks, minimum ventilation by root finding (bisection, secant),
     demand-controlled ventilation and outdoor-air energy.
+sensitivity
+    Exact scaling law, one-at-a-time (tornado) sensitivity, elasticities and
+    Monte Carlo uncertainty propagation.
 """
 
-__version__ = "0.4.0"
+__version__ = "0.5.0"

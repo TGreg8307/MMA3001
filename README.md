@@ -35,7 +35,7 @@ ODE has an exact solution. It is used to verify the numerical solvers
 | 2. CO2 mass-balance model, exact solution and numerical solvers (`occvent.co2model`, `occvent.solvers`) | ✅ done and tested |
 | 3. Verification and performance study (`notebooks/03_verification.ipynb`, `occvent.metrics`, `occvent.verification`) | ✅ done |
 | 4. Compliance check, minimum ventilation (root finding), DCV energy comparison (`notebooks/04_ventilation_design.ipynb`, `occvent.design`) | ✅ done |
-| 5. Sensitivity analysis | ⏳ |
+| 5. Sensitivity and uncertainty analysis (`notebooks/05_sensitivity.ipynb`, `occvent.sensitivity`) | ✅ done |
 | 6. Occupancy forecasting (ML extension) | ⏳ |
 
 ## Repository layout
@@ -50,10 +50,11 @@ ODE has an exact solution. It is used to verify the numerical solvers
 │   ├── solvers.py        explicit/implicit Euler, RK4, SciPy benchmark
 │   ├── metrics.py        8-hour mean, peak, time above limits
 │   ├── verification.py   convergence, stability, stiffness, FLOPs, timing, roofline
-│   └── design.py         compliance, Q_min root finding, DCV, energy
+│   ├── design.py         compliance, Q_min root finding, DCV, energy
+│   └── sensitivity.py    scaling law, OAT/tornado, elasticities, Monte Carlo
 ├── tests/                pytest test suite
 ├── data/                 raw/ and processed/ (not committed, see data/README.md)
-├── notebooks/            03_verification.ipynb, 04_ventilation_design.ipynb
+├── notebooks/            03_verification, 04_ventilation_design, 05_sensitivity
 ├── docs/                 figures/ for the report; HTML API documentation (pdoc)
 ├── pyproject.toml        package metadata and pytest settings
 └── requirements.txt      pinned, verified dependency versions
@@ -208,6 +209,32 @@ G = 0.0052 L/s per person, C_out = 420 ppm, well-mixed air).
   meeting both criteria, also with the fan capped at 600 L/s.
 * **Annual outdoor-air conditioning energy** (ΔT = 7 K assumed; percentages are independent of ΔT):
   fixed design 44.4 MWh, scheduled 06–22 h 23.1 MWh (−48 %), DCV 3.9 MWh (**−91 %**).
+
+## Sensitivity and uncertainty (stage 5)
+
+`notebooks/05_sensitivity.ipynb` (about 3 minutes; section G3 also re-reads the raw zip if present)
+tests how the Stage 4 answers depend on the uncertain inputs: room volume V (300–1200 m3),
+CO2 generation G (0.0040–0.0060 L/s), outdoor CO2 (400–460 ppm) and a people-counter
+factor k (true occupancy = k × counted, 0.8–1.2).
+
+* **Exact scaling law.** The model is linear, so every metric is
+  `C_out + (k G / V) M(Q/V)` for one unit-room curve M(a). G and k act only as the product kG.
+  Q_min for any inputs follows from interpolating the tabulated curve (checked against full
+  root finding: max error 0.014 %), so 20 000 Monte Carlo draws take milliseconds.
+* **One-at-a-time (tornado):** Q_min for the NCC 8-h criterion is driven by kG (about ±20 %) and C_out;
+  the room volume barely matters (< 3 %). For the 1000 ppm peak, V matters as much as kG (about ±22 %).
+  The DCV rate q_p depends on kG and C_out only.
+* **Elasticities** from the full model agree with the theory from the scaling law.
+* **Monte Carlo (20 000 draws):**
+
+| Criterion | Nominal Q_min | 5th–95th percentile | P(nominal is enough) | P(600 L/s design fails) |
+|---|---|---|---|---|
+| NCC 8-h mean ≤ 850 ppm | 211.9 L/s | 168–257 L/s | 54 % | 0 % |
+| Peak ≤ 1000 ppm | 443.7 L/s | 301–603 L/s | 54 % | 5.3 % |
+
+* **Numerical sensitivity:** RK4 changes Q_min by < 0.01 L/s and explicit Euler by up to 1 % (peak).
+  Hold limits make no difference. Coarse occupancy bins under-size the peak design (−25 % at 60 min),
+  so 1-minute data are kept.
 
 ## AI use
 
