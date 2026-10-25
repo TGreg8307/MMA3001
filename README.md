@@ -186,7 +186,7 @@ checks the solvers against the exact solution and measures their cost. Figures a
 | Exact vs trapezoidal 8-h mean | trapezoid exact to 1e-5 ppm at 1-min sampling; 0.25–1.7 ppm error at 16–60 min sampling (corners in C) |
 | Zero-order hold vs linear interpolation | linear interpolation overstates person-hours by 5.2 % on the busiest day |
 | Numerical vs parameter error | Euler error 0.09 ppm vs 50–60 ppm for ±20 % in Q or G |
-| Performance (1.12 M steps) | exact `lfilter` 0.04 s (about 6× the Python loop); loop solvers interpreter-bound, far below the measured roofline |
+| Performance (1.12 M steps) | exact `lfilter` 0.04–0.05 s (3–6× faster than the Python loop, machine-dependent); loop solvers interpreter-bound, far below the measured roofline |
 
 ## AI use
 
