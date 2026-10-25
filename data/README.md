@@ -6,7 +6,9 @@ teaching team).
 
 ## Raw data (`data/raw/`)
 
-Put the file supplied for the unit here, unchanged:
+Create the folders `data/raw/` and `data/processed/` if they do not exist (they are empty in
+the repository, so a fresh clone may not contain them; `occvent.prepare` creates
+`data/processed/` itself). Then put the file supplied for the unit here, unchanged:
 
 ```
 data/raw/5occupancySensor_MayToDec2024_9MRows.zip
