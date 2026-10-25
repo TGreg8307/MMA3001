@@ -129,7 +129,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the command-line interface and return the process exit code."""
+    """Run the command-line interface and return the process exit code.
+
+    Parameters
+    ----------
+    argv : sequence of str, optional
+        Command-line arguments without the program name. ``None`` (default)
+        reads them from ``sys.argv``, which is what happens when the module
+        is run as ``python -m occvent.prepare``.
+
+    Returns
+    -------
+    int
+        Exit code: 0 on success. Errors propagate as exceptions with a
+        message (for example, an unknown room key or a missing raw file).
+    """
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = ResampleSettings(

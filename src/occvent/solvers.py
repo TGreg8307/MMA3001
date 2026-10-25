@@ -208,6 +208,7 @@ def solve_scipy(
     t_grid = np.arange(n + 1) * dt_s
 
     def rhs(t: float, c: np.ndarray) -> np.ndarray:
+        # dC/dt = a_i - k_i C, with i the data step containing t (piecewise-constant inputs).
         i = min(int(t // dt_s), n - 1)
         return a_arr[i] - k_arr[i] * c
 

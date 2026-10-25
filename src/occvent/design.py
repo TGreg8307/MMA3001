@@ -356,6 +356,7 @@ def find_min_ventilation(
     occ, _ = validate_inputs(occupancy, 1.0, dt_s)
 
     def F(q: float) -> float:
+        # Compliance function: positive = too little air, zero at Q_min (one ODE solve per call).
         return evaluate_ventilation(occ, q, params, dt_s)[key] - limit
 
     return _solve_monotone_decreasing(F, bracket_lps[0], bracket_lps[1], method, x_tol, f_tol,
@@ -378,6 +379,22 @@ def dcv_ventilation(
     count. The floor keeps a minimum flow when the room is empty or lightly
     used, so CO2 (and other pollutants) can still be flushed out. The optional
     cap represents the maximum capacity of the fan or air-handling unit.
+
+    Parameters
+    ----------
+    occupancy : array_like
+        People per step (measured or forecast).
+    q_per_person_lps : float
+        Outdoor air per person ``q_p`` [L/s per person], >= 0.
+    q_floor_lps : float
+        Minimum flow ``Q_floor`` [L/s], >= 0.
+    q_cap_lps : float, optional
+        Maximum flow ``Q_cap`` [L/s], >= ``q_floor_lps``. ``None`` means no cap.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flow [L/s] for every step.
 
     Raises
     ------
@@ -419,6 +436,7 @@ def find_min_dcv_rate(
     occ, _ = validate_inputs(occupancy, 1.0, dt_s)
 
     def F(qp: float) -> float:
+        # Same compliance function, but for the DCV per-person rate q_p.
         q = dcv_ventilation(occ, qp, q_floor_lps, q_cap_lps)
         return evaluate_ventilation(occ, q, params, dt_s)[key] - limit
 

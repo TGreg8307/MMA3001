@@ -226,6 +226,19 @@ def arithmetic_intensity(method: str, substeps: int = 1) -> float:
     reuse the same loaded coefficients, so refining ``h`` raises the
     intensity.
 
+    Parameters
+    ----------
+    method : str
+        A key of :data:`FLOPS_PER_SUBSTEP` (``"explicit_euler"``,
+        ``"implicit_euler"``, ``"rk4"`` or ``"exact"``).
+    substeps : int, default 1
+        Solver sub-steps per data step.
+
+    Returns
+    -------
+    float
+        FLOPs per byte of memory traffic.
+
     Raises
     ------
     ValueError
@@ -257,6 +270,11 @@ def best_time(fn: Callable[[], object], repeat: int = 5, number: int = 1) -> flo
     -------
     float
         Seconds per call.
+
+    Raises
+    ------
+    ValueError
+        If ``repeat`` or ``number`` is less than 1.
     """
     if repeat < 1 or number < 1:
         raise ValueError("repeat and number must be >= 1")
@@ -327,6 +345,11 @@ def stiffness_summary(ventilation_lps: float, volume_m3: float, dt_s: float = 60
         ``eigenvalue_per_s``, ``time_constant_s``, ``air_changes_per_hour``,
         ``k_dt``, ``euler_max_stable_step_s``, ``rk4_max_stable_step_s`` and
         ``stiffness_ratio``.
+
+    Raises
+    ------
+    ValueError
+        If any argument is not positive.
     """
     if ventilation_lps <= 0 or volume_m3 <= 0 or dt_s <= 0:
         raise ValueError("ventilation_lps, volume_m3 and dt_s must be positive")
