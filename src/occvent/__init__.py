@@ -18,6 +18,10 @@ cleaning
     data-quality flags.
 prepare
     Command-line pipeline: ``python -m occvent.prepare --raw <file>``.
+co2model
+    Well-mixed CO2 mass-balance ODE, its exact solution and the CO2 budget.
+solvers
+    Explicit Euler, implicit Euler, RK4 and a SciPy ``solve_ivp`` benchmark.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

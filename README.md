@@ -32,8 +32,8 @@ ODE has an exact solution. It is used to verify the numerical solvers
 | Stage | Status |
 |---|---|
 | 1. Data loading, cleaning and resampling (`occvent.io`, `occvent.cleaning`, `occvent.prepare`) | ✅ done and tested |
-| 2. CO2 mass-balance model, exact solution and numerical solvers | ⏳ next |
-| 3. Verification: convergence, stability, conservation | ⏳ |
+| 2. CO2 mass-balance model, exact solution and numerical solvers (`occvent.co2model`, `occvent.solvers`) | ✅ done and tested |
+| 3. Verification study: convergence plots, stability, performance (notebook) | ⏳ next (orders, stability and conservation already covered by tests) |
 | 4. Compliance check, ventilation optimisation, DCV energy comparison | ⏳ |
 | 5. Sensitivity analysis | ⏳ |
 | 6. Occupancy forecasting (ML extension) | ⏳ |
@@ -45,7 +45,9 @@ ODE has an exact solution. It is used to verify the numerical solvers
 │   ├── config.py         constants, room registry, time zone
 │   ├── io.py             chunked raw reader; save/load processed series
 │   ├── cleaning.py       validation, de-duplication, exact resampling, quality flags
-│   └── prepare.py        command-line data pipeline
+│   ├── prepare.py        command-line data pipeline
+│   ├── co2model.py       CO2 mass-balance ODE, exact solution, mass balance
+│   └── solvers.py        explicit/implicit Euler, RK4, SciPy benchmark
 ├── tests/                pytest test suite
 ├── data/                 raw/ and processed/ (not committed, see data/README.md)
 ├── notebooks/            analysis notebooks
@@ -131,6 +133,40 @@ Results on the real export:
 | Occupied holds cut at 2.5 h (likely stuck counts) | 0 | 11 (25.2 h) |
 | Night bins occupied | 3.2 % | 25.8 % (suspected sensor artefact) |
 | Mean occupancy | 0.89 people | 0.66 people |
+
+## CO2 model and solvers (stage 2)
+
+Well-mixed single-zone mass balance (`occvent.co2model`):
+
+    V dC/dt = 1e6 G N(t) + Q (C_out - C)      ->   dC/dt = a - k C,  k = Q/V
+
+| Symbol | Meaning | Default |
+|---|---|---|
+| V | room air volume [m3] | G.20: **600 m3, estimated** (no dimensions supplied; varied in sensitivity analysis) |
+| Q | outdoor-air flow [L/s] | input (constant or time-varying) |
+| G | CO2 generation [L/s per person] | 0.0052 |
+| C_out | outdoor CO2 [ppm] | 420 |
+
+Because N and Q are constant within each 1-minute step, the exact step
+solution `C_{i+1} = e^{-kh} C_i + a h (1 - e^{-kh})/(kh)` is applied step by
+step. It has no discretisation error, so it is the reference for verifying
+the numerical solvers (`occvent.solvers`).
+
+Results on the full G.20 record (1,123,729 one-minute steps, V = 600 m3,
+Q = 300 L/s, so k h = 0.03):
+
+| Method | Runtime | Max error vs exact |
+|---|---|---|
+| Exact, `lfilter` (compiled) | 0.06 s | reference |
+| Exact, Python loop | 0.24 s | 0 (identical) |
+| Explicit Euler (h = 60 s) | 0.33 s | 5.2 ppm |
+| Implicit Euler (h = 60 s) | 0.48 s | 5.1 ppm |
+| RK4 (h = 60 s) | 0.68 s | 2.4e-6 ppm |
+| SciPy RK45 (rtol 1e-8), **one week only** | 4.2 s | 3.6e-3 ppm |
+
+Observed orders of convergence (test problem with k dt = 0.5, step halved
+4 times): explicit Euler 1.02, implicit Euler 0.98, RK4 4.04, matching
+theory (1, 1, 4). The CO2 budget closes to a relative residual of 2e-14.
 
 ## AI use
 

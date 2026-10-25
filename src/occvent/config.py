@@ -84,6 +84,26 @@ ROOMS: dict[str, Room] = {
 }
 
 
+#: Default outdoor (supply-air) CO2 concentration [ppm]. Global background
+#: CO2 was about 420-425 ppm in 2024-2026. The NCC note behind its 850 ppm
+#: limit assumes 400 ppm ambient. Varied in the sensitivity analysis.
+DEFAULT_OUTDOOR_CO2_PPM: float = 420.0
+
+#: Default CO2 generation per occupant [L/s per person]. Typical adult value
+#: for sedentary or light office activity (about 1.2 met), as used in
+#: ASHRAE 62.1 / ASTM D6245. The literature range is about 0.004-0.006 L/s.
+#: Varied in the sensitivity analysis.
+DEFAULT_CO2_GENERATION_LPS: float = 0.0052
+
+#: ESTIMATED internal air volume of each room [m3]. No dimensions were
+#: supplied. G.20 is taken as about 200 m2 of floor area x 3.0 m ceiling.
+#: This is an assumption: results are reported with a sensitivity range
+#: (about 300-1200 m3) and should be updated if real dimensions are obtained.
+ESTIMATED_VOLUME_M3: dict[str, float] = {
+    "G20": 600.0,
+}
+
+
 def get_room(key: str) -> Room:
     """Return the :class:`Room` registered under ``key``.
 
