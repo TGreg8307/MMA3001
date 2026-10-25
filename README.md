@@ -1,7 +1,7 @@
 # Occupancy-Driven Ventilation Assessment
 
 **MMA3001 Numerical Methods and Machine Learning, individual project (2026)**
-Author: Tom Gregory
+Author: Tom Gregory · Repository: <https://github.com/TGreg8307/MMA3001>
 
 ## Engineering problem
 
@@ -80,8 +80,8 @@ chosen for the analysis. G.25 is not analysed further.
 Requires Python 3.11 or newer.
 
 ```powershell
-git clone <repository-url>
-cd <repository-folder>
+git clone https://github.com/TGreg8307/MMA3001.git
+cd MMA3001
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -131,7 +131,7 @@ pytest --html=docs/test_report.html --self-contained-html   # HTML test report
 pdoc src/occvent -o docs/api --docformat numpy --math       # HTML API documentation
 ```
 
-* **API documentation:** open `docs/api/index.html` in a browser. It is generated from the NumPy-style
+* **API documentation:** open `docs/api/index.html` in a browser (download or clone the repository first; GitHub shows HTML files as source code). It is generated from the NumPy-style
   docstrings in `src/occvent/`, so it always matches the code. Re-run the `pdoc` command after any change.
 * **Test report:** open `docs/test_report.html`. The tests check the code against hand calculations,
   analytical solutions (steady state, exponential decay), conservation of person-time and CO2,
