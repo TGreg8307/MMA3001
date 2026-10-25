@@ -88,6 +88,20 @@ def scaled_metric(
     Valid for metrics that scale linearly with ``C - C_out``: the worst
     8-hour mean, the peak and the mean. It is **not** valid for "fraction of
     time above a limit". Arrays broadcast.
+
+    Parameters
+    ----------
+    unit_value : float or array_like
+        Metric of the unit room, ``M(a)``.
+    volume_m3, co2_generation_lps, outdoor_co2_ppm : float or array_like
+        ``V`` [m3], ``G`` [L/s per person] and ``C_out`` [ppm] of the real room.
+    count_factor : float or array_like, default 1.0
+        ``k``: true occupancy divided by counted occupancy.
+
+    Returns
+    -------
+    numpy.ndarray
+        The metric of the real room [ppm].
     """
     return np.asarray(outdoor_co2_ppm) + (np.asarray(count_factor) * np.asarray(co2_generation_lps)
                                          / np.asarray(volume_m3)) * np.asarray(unit_value)
@@ -132,6 +146,10 @@ class ResponseCurve:
             Flows ``Q/V`` [(L/s)/m3]. Defaults to 81 log-spaced values from
             0.05 to 10, i.e. 0.18–36 air changes per hour.
 
+        Returns
+        -------
+        ResponseCurve
+
         Raises
         ------
         ValueError
@@ -166,6 +184,20 @@ class ResponseCurve:
     ) -> np.ndarray:
         """Metric [ppm] for constant flow ``Q``, interpolating ``log M`` against ``log a``.
 
+        Parameters
+        ----------
+        criterion : {"8h", "peak"}
+            Which metric.
+        ventilation_lps : float or array_like
+            Constant flow ``Q`` [L/s].
+        volume_m3, co2_generation_lps, outdoor_co2_ppm, count_factor
+            As for :func:`scaled_metric`. Arrays broadcast.
+
+        Returns
+        -------
+        numpy.ndarray
+            Worst 8-hour mean or peak CO2 [ppm].
+
         Raises
         ------
         ValueError
@@ -191,6 +223,20 @@ class ResponseCurve:
 
         Solves ``M(a) = (limit - C_out) V / (k G)`` by inverse interpolation of
         the tabulated, strictly decreasing ``M(a)``, then ``Q_min = a V``.
+
+        Parameters
+        ----------
+        criterion : {"8h", "peak"}
+            Which metric must meet its limit.
+        volume_m3, co2_generation_lps, outdoor_co2_ppm, count_factor
+            As for :func:`scaled_metric`. Arrays broadcast.
+        limit_ppm : float, optional
+            Overrides the criterion's default limit (850 or 1000 ppm).
+
+        Returns
+        -------
+        numpy.ndarray
+            ``Q_min`` [L/s] for each set of inputs.
 
         Raises
         ------
@@ -279,6 +325,11 @@ def elasticities(
         Inputs to differentiate. Defaults to all of ``nominal``.
     rel_step : float, default 0.01
         Relative perturbation ``h``: inputs are set to ``x (1 +/- h)``.
+
+    Returns
+    -------
+    dict of str to float
+        Elasticity of ``f`` with respect to each input in ``names``.
 
     Raises
     ------
@@ -369,6 +420,18 @@ def percentile_summary(values: np.ndarray, percentiles: tuple[float, ...] = (5, 
     The standard error ``sd / sqrt(n)`` shows the ``1/sqrt(n)`` convergence of
     Monte Carlo estimates.
 
+    Parameters
+    ----------
+    values : array_like
+        Sample of an output (finite values).
+    percentiles : tuple of float, default (5, 50, 95)
+        Percentiles to report.
+
+    Returns
+    -------
+    dict
+        ``n``, ``mean``, ``sd``, ``sem`` and ``p<percentile>`` for each percentile.
+
     Raises
     ------
     ValueError
@@ -393,6 +456,18 @@ def aggregate_occupancy(occupancy: np.ndarray, factor: int) -> np.ndarray:
     Each 1-minute value is already an exact time-average, so the block mean
     is the exact time-average over the coarser bin, and person-time is
     conserved. An incomplete final block is dropped.
+
+    Parameters
+    ----------
+    occupancy : array_like
+        People per step on the fine grid.
+    factor : int
+        Number of fine steps per coarse step.
+
+    Returns
+    -------
+    numpy.ndarray
+        Block means, length ``len(occupancy) // factor``.
 
     Raises
     ------

@@ -354,6 +354,12 @@ def step_mean_concentration(
     -------
     numpy.ndarray
         Mean concentration in each step [ppm], length ``n``.
+
+    Raises
+    ------
+    ValueError
+        If the inputs are invalid (see :func:`validate_inputs`) or ``c_ppm``
+        does not have exactly one more value than ``occupancy``.
     """
     a, k = ode_coefficients(occupancy, ventilation_lps, params, dt_s)
     c_ppm = np.asarray(c_ppm, dtype=np.float64)
@@ -382,6 +388,13 @@ def co2_mass_balance(
     For the exact solution the residual is zero up to round-off, because
     the step solution integrates the ODE exactly. This is a conservation
     check on the implementation.
+
+    Parameters
+    ----------
+    c_ppm : numpy.ndarray
+        Concentration at the ``n + 1`` grid points [ppm], from any solver.
+    occupancy, ventilation_lps, params, dt_s
+        As passed to the solver that produced ``c_ppm``.
 
     Returns
     -------

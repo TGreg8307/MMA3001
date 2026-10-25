@@ -128,6 +128,18 @@ def fill_short_gaps(table: pd.DataFrame, max_slots: int = 4) -> pd.DataFrame:
     neighbouring slots of the *earlier* day keeps those rows usable without
     using any later information. Longer gaps, and gaps at the start or end of
     a day, are left missing. The target itself is never filled.
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        A (date x slot) table, as from :func:`daily_slot_table`.
+    max_slots : int, default 4
+        Longest run of missing slots that is filled (4 slots = 1 hour).
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy of ``table`` with short interior gaps filled.
     """
     a = table.to_numpy(dtype=np.float64, copy=True)
     n = a.shape[1]
@@ -190,6 +202,11 @@ def make_features(
         One row per (date, slot) with all features known and a finite target.
         Index: ``MultiIndex`` (``date``, ``slot``). Columns:
         :data:`FEATURE_COLUMNS` (for the default ``n_harmonics``) and ``target``.
+
+    Raises
+    ------
+    ValueError
+        If ``n_harmonics < 1``.
     """
     if n_harmonics < 1:
         raise ValueError("n_harmonics must be >= 1")
@@ -209,6 +226,7 @@ def make_features(
     prev_week = t.mean(axis=1, skipna=True).rolling(7, min_periods=7).mean().shift(1)
 
     def long(df: pd.DataFrame, name: str) -> pd.Series:
+        # (date x slot) table -> one long column indexed by (date, slot); keeps NaN cells.
         s = df.stack(future_stack=True)
         s.index = s.index.set_names(["date", "slot"])
         return s.rename(name)
@@ -241,7 +259,20 @@ def make_features(
 
 
 def period_mask(index: pd.MultiIndex, start: str, end: str) -> np.ndarray:
-    """Boolean mask of rows whose ``date`` level lies in ``[start, end]`` (inclusive, ISO dates)."""
+    """Boolean mask of rows whose ``date`` level lies in ``[start, end]`` (inclusive).
+
+    Parameters
+    ----------
+    index : pandas.MultiIndex
+        Row index with a ``date`` level, as produced by :func:`make_features`.
+    start, end : str
+        ISO dates, e.g. ``"2025-07-01"``.
+
+    Returns
+    -------
+    numpy.ndarray
+        Boolean array, one value per row.
+    """
     d = pd.to_datetime(pd.Index(index.get_level_values("date")))
     return np.asarray((d >= pd.Timestamp(start)) & (d <= pd.Timestamp(end)))
 
@@ -267,13 +298,44 @@ class LagBaseline(RegressorMixin, BaseEstimator):
     def __init__(self, column: str = "lag_7d"):
         self.column = column
 
-    def fit(self, X: pd.DataFrame, y=None):  # noqa: D102 - nothing to learn
+    def fit(self, X: pd.DataFrame, y=None):
+        """Check that the column exists; nothing is learned.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Feature rows (must contain ``column``).
+        y : ignored
+            Present for scikit-learn compatibility.
+
+        Returns
+        -------
+        LagBaseline
+            ``self``.
+
+        Raises
+        ------
+        ValueError
+            If ``column`` is not a column of ``X``.
+        """
         if self.column not in X.columns:
             raise ValueError(f"column {self.column!r} not in X")
         self.n_features_in_ = X.shape[1]
         return self
 
-    def predict(self, X: pd.DataFrame) -> np.ndarray:  # noqa: D102
+    def predict(self, X: pd.DataFrame) -> np.ndarray:
+        """Return ``X[column]`` as the prediction.
+
+        Parameters
+        ----------
+        X : pandas.DataFrame
+            Feature rows.
+
+        Returns
+        -------
+        numpy.ndarray
+            The values of ``column``.
+        """
         return X[self.column].to_numpy(dtype=np.float64)
 
 
@@ -292,6 +354,24 @@ def build_models(
     * ``"mlp"``: standardisation + a multilayer perceptron with early
       stopping and a fixed seed (5.4). Scaling sits inside the pipeline, so it
       is learned from training rows only.
+
+    Parameters
+    ----------
+    tree_depth : int, default 8
+        ``max_depth`` of the tree (chosen by cross-validation in the notebook).
+    tree_min_leaf : int, default 50
+        ``min_samples_leaf`` of the tree.
+    mlp_hidden : tuple of int, default (32, 16)
+        Neurons in each hidden layer of the MLP.
+    mlp_alpha : float, default 1e-3
+        L2 regularisation strength of the MLP.
+    random_state : int, default 0
+        Seed for the tree's tie-breaking and the MLP's initialisation.
+
+    Returns
+    -------
+    dict of str to sklearn.pipeline.Pipeline
+        ``{"linear": ..., "tree": ..., "mlp": ...}``.
     """
     return {
         "linear": Pipeline([("scale", StandardScaler()), ("model", LinearRegression())]),
@@ -305,7 +385,20 @@ def build_models(
 
 
 def predict_nonnegative(model, X: pd.DataFrame) -> np.ndarray:
-    """Model prediction clipped at zero: occupancy cannot be negative (a physical constraint, 5.4.13)."""
+    """Model prediction clipped at zero: occupancy cannot be negative (a physical constraint, 5.4.13).
+
+    Parameters
+    ----------
+    model : fitted scikit-learn estimator
+        Any object with a ``predict`` method.
+    X : pandas.DataFrame
+        Feature rows.
+
+    Returns
+    -------
+    numpy.ndarray
+        Predictions [people], all >= 0.
+    """
     return np.maximum(np.asarray(model.predict(X), dtype=np.float64), 0.0)
 
 
@@ -315,6 +408,17 @@ def predict_nonnegative(model, X: pd.DataFrame) -> np.ndarray:
 
 def regression_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     """MAE, RMSE, R² and bias (mean of ``y_pred - y_true``; negative = under-prediction).
+
+    Parameters
+    ----------
+    y_true, y_pred : array_like
+        Actual and predicted values (same length).
+
+    Returns
+    -------
+    dict
+        ``MAE``, ``RMSE`` (same units as ``y``), ``R2`` (``NaN`` if ``y_true``
+        is constant) and ``bias``.
 
     Raises
     ------
@@ -344,6 +448,24 @@ def bootstrap_mae_by_day(
     understate the variability. Resampling days keeps each day's errors
     together (a block bootstrap). As in Notebook 5.5.11, this describes the
     precision of one test MAE for a fixed model; it is not a prediction interval.
+
+    Parameters
+    ----------
+    abs_errors : array_like
+        Absolute errors, one per row.
+    dates : array_like
+        The day each row belongs to (same length).
+    n_boot : int, default 2000
+        Bootstrap resamples.
+    percentiles : (float, float), default (2.5, 97.5)
+        Lower and upper percentiles of the interval.
+    seed : int, default 0
+        Random seed.
+
+    Returns
+    -------
+    (float, float)
+        Lower and upper ends of the interval.
 
     Raises
     ------
@@ -390,6 +512,11 @@ def slots_to_steps(
     -------
     numpy.ndarray
         One value per step; ``NaN`` where no slot value exists.
+
+    Raises
+    ------
+    ValueError
+        If ``step_index`` is not tz-aware.
     """
     if step_index.tz is None:
         raise ValueError("step_index must be tz-aware")

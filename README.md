@@ -25,7 +25,20 @@ ODE has an exact solution. It is used to verify the numerical solvers
 (explicit and implicit Euler, RK4, SciPy `solve_ivp`).
 
 **Case study:** Monash Clayton, Building 60, room G.20 (Informal Breakout).
-**Robustness case:** G.25 (manufacturing lab).
+**Data-quality comparison:** G.25 (manufacturing lab) is processed by the same pipeline. Its frequent
+night-time counts (26 % of night bins, a suspected sensor artefact) are flagged, which is why G.20 was
+chosen for the analysis. G.25 is not analysed further.
+
+## Key results (G.20, stated assumptions)
+
+| Question | Answer | Where |
+|---|---|---|
+| Is the solver correct? | Exact solution verified analytically; Euler/RK4 orders 1.005/4.04; CO2 budget closes to 2e-14 | notebook 03 |
+| Does the design rate (600 L/s) comply? | Yes, with a large margin | notebook 04 |
+| Minimum constant ventilation | 211.9 L/s (NCC 8-h, 850 ppm); 443.7 L/s (1000 ppm peak) | notebook 04 |
+| Demand-controlled ventilation | 12.06 L/s per person; −91 % outdoor-air conditioning energy vs the design rate | notebook 04 |
+| Robust design (95 % confidence) | about 257 L/s (8-h) and 603 L/s (peak); room volume matters only for the peak | notebook 05 |
+| Can a day-ahead forecast replace the sensor? | No: forecast-scheduled ventilation fails on irregular event days; sensor DCV complies | notebook 06 |
 
 ## Project status
 
@@ -37,6 +50,7 @@ ODE has an exact solution. It is used to verify the numerical solvers
 | 4. Compliance check, minimum ventilation (root finding), DCV energy comparison (`notebooks/04_ventilation_design.ipynb`, `occvent.design`) | ✅ done |
 | 5. Sensitivity and uncertainty analysis (`notebooks/05_sensitivity.ipynb`, `occvent.sensitivity`) | ✅ done |
 | 6. Day-ahead occupancy forecasting, ML extension (`notebooks/06_forecasting.ipynb`, `occvent.forecast`) | ✅ done |
+| 7. HTML documentation, test report, written report and presentation | ✅ done |
 
 ## Repository layout
 
@@ -56,7 +70,7 @@ ODE has an exact solution. It is used to verify the numerical solvers
 ├── tests/                pytest test suite
 ├── data/                 raw/ and processed/ (not committed, see data/README.md)
 ├── notebooks/            03_verification, 04_ventilation_design, 05_sensitivity, 06_forecasting
-├── docs/                 figures/ for the report; HTML API documentation (pdoc)
+├── docs/                 api/ HTML documentation (pdoc), test_report.html (pytest-html), figures/
 ├── pyproject.toml        package metadata and pytest settings
 └── requirements.txt      pinned, verified dependency versions
 ```
@@ -96,13 +110,33 @@ from occvent.io import load_processed
 g20 = load_processed("data/processed/G20_occupancy_1min.csv.gz")
 ```
 
+4. Reproduce the analysis by running the notebooks in order (`python -m jupyterlab`, then
+   **Run → Run All Cells** in each). Each notebook regenerates its figures in `docs/figures/`.
+
+| Notebook | Content | Runtime |
+|---|---|---|
+| `03_verification.ipynb` | solver verification, stability, convergence, performance (FLOPs, roofline, profiling) | ~1 min |
+| `04_ventilation_design.ipynb` | compliance, minimum ventilation by root finding, DCV, energy | ~30 s |
+| `05_sensitivity.ipynb` | scaling law, tornado, elasticities, Monte Carlo, numerical sensitivity | ~3 min |
+| `06_forecasting.ipynb` | day-ahead occupancy forecasting (ML) and its ventilation consequences | ~1.5 min |
+
+Stages 1–2 (data pipeline, CO2 model and solvers) are library code in `src/occvent/`, exercised by
+the tests and by notebook 03.
+
 ## Tests and documentation
 
 ```powershell
-pytest                                                  # run the test suite
+pytest                                                      # run the test suite (120 tests)
 pytest --html=docs/test_report.html --self-contained-html   # HTML test report
-pdoc src/occvent -o docs/api --docformat numpy --math   # HTML API docs
+pdoc src/occvent -o docs/api --docformat numpy --math       # HTML API documentation
 ```
+
+* **API documentation:** open `docs/api/index.html` in a browser. It is generated from the NumPy-style
+  docstrings in `src/occvent/`, so it always matches the code. Re-run the `pdoc` command after any change.
+* **Test report:** open `docs/test_report.html`. The tests check the code against hand calculations,
+  analytical solutions (steady state, exponential decay), conservation of person-time and CO2,
+  convergence orders, and leakage-free forecasting features.
+* The tests need no raw data: they use small synthetic inputs.
 
 ## Data cleaning method (stage 1)
 
