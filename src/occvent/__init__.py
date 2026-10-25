@@ -32,6 +32,9 @@ design
 sensitivity
     Exact scaling law, one-at-a-time (tornado) sensitivity, elasticities and
     Monte Carlo uncertainty propagation.
+forecast
+    Day-ahead occupancy forecasting: leakage-free features, baselines, Week 5
+    models and evaluation helpers.
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"

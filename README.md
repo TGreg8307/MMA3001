@@ -36,7 +36,7 @@ ODE has an exact solution. It is used to verify the numerical solvers
 | 3. Verification and performance study (`notebooks/03_verification.ipynb`, `occvent.metrics`, `occvent.verification`) | ✅ done |
 | 4. Compliance check, minimum ventilation (root finding), DCV energy comparison (`notebooks/04_ventilation_design.ipynb`, `occvent.design`) | ✅ done |
 | 5. Sensitivity and uncertainty analysis (`notebooks/05_sensitivity.ipynb`, `occvent.sensitivity`) | ✅ done |
-| 6. Occupancy forecasting (ML extension) | ⏳ |
+| 6. Day-ahead occupancy forecasting, ML extension (`notebooks/06_forecasting.ipynb`, `occvent.forecast`) | ✅ done |
 
 ## Repository layout
 
@@ -51,10 +51,11 @@ ODE has an exact solution. It is used to verify the numerical solvers
 │   ├── metrics.py        8-hour mean, peak, time above limits
 │   ├── verification.py   convergence, stability, stiffness, FLOPs, timing, roofline
 │   ├── design.py         compliance, Q_min root finding, DCV, energy
-│   └── sensitivity.py    scaling law, OAT/tornado, elasticities, Monte Carlo
+│   ├── sensitivity.py    scaling law, OAT/tornado, elasticities, Monte Carlo
+│   └── forecast.py       day-ahead features (no leakage), baselines, models, metrics
 ├── tests/                pytest test suite
 ├── data/                 raw/ and processed/ (not committed, see data/README.md)
-├── notebooks/            03_verification, 04_ventilation_design, 05_sensitivity
+├── notebooks/            03_verification, 04_ventilation_design, 05_sensitivity, 06_forecasting
 ├── docs/                 figures/ for the report; HTML API documentation (pdoc)
 ├── pyproject.toml        package metadata and pytest settings
 └── requirements.txt      pinned, verified dependency versions
@@ -235,6 +236,30 @@ factor k (true occupancy = k × counted, 0.8–1.2).
 * **Numerical sensitivity:** RK4 changes Q_min by < 0.01 L/s and explicit Euler by up to 1 % (peak).
   Hold limits make no difference. Coarse occupancy bins under-size the peak design (−25 % at 60 min),
   so 1-minute data are kept.
+
+## Day-ahead occupancy forecasting (stage 6, ML extension)
+
+`notebooks/06_forecasting.ipynb` (about 1.5 minutes) asks whether tomorrow's 15-minute occupancy can be
+forecast well enough to schedule ventilation without a live sensor. Forecasts are issued at local midnight
+and use only the calendar (time of day, weekday, Victorian public holidays) and occupancy from earlier days;
+a unit test confirms no information from the target day leaks into the features.
+
+* **Split (time-ordered):** training 31 Mar 2024 – 30 Jun 2025, validation Jul–Dec 2025, test
+  1 Jan – 22 Apr 2026 (used once). Tuning by `TimeSeriesSplit` (5 folds, 1-day gap).
+* **Models (Week 5):** mean (`DummyRegressor`), seasonal naive, 4-week mean, linear regression, decision
+  tree (depth 6, leaf ≥ 200 by CV), neural network (3 seeds). Selected: **linear regression**.
+
+| Test period (Jan–Apr 2026) | MAE | RMSE | R² | Busy-slot bias (≥ 5 people) |
+|---|---|---|---|---|
+| Seasonal naive (same time last week) | 0.90 | 2.73 | −0.31 | −5.0 |
+| 4-week mean (2 h smoothed) | 0.75 | 2.11 | 0.22 | −5.5 |
+| Linear regression (selected) | 0.76 | **2.02** | **0.29** | −5.7 |
+
+* **Engineering test:** ventilation scheduled from the forecast, `Q = max(50, s q_p N̂)`, exceeds the
+  NCC 8-h limit on 12 of 112 test days (s = 1) and still on 2 days even with s = 8 (at twice the airflow),
+  because unforeseen events (e.g. up to 59 people on the evening of 19 Feb 2026) are invisible to the
+  forecast. Sensor-driven DCV complies on every day. **Conclusion:** the forecast is useful for planning,
+  but not as a replacement for a live occupancy or CO2 sensor.
 
 ## AI use
 
